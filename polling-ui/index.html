@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Events Polling UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f9f9f9;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .event {
+            background: #fff;
+            margin-bottom: 12px;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px #eee;
+        }
+
+        .timestamp {
+            color: #888;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Latest GitHub Repo Events</h1>
+    <div id="events"></div>
+    <script>
+        function formatEvent(event) {
+            if (event.action === 'PUSH') {
+                return `<b>${event.author}</b> pushed to <b>${event.to_branch}</b> <span class="timestamp">on ${event.timestamp}</span>`;
+            } else if (event.action === 'PULL_REQUEST') {
+                return `<b>${event.author}</b> submitted a pull request from <b>${event.from_branch}</b> to <b>${event.to_branch}</b> <span class="timestamp">on ${event.timestamp}</span>`;
+            } else if (event.action === 'MERGE') {
+                return `<b>${event.author}</b> merged branch <b>${event.from_branch}</b> to <b>${event.to_branch}</b> <span class="timestamp">on ${event.timestamp}</span>`;
+            } else {
+                return JSON.stringify(event);
+            }
+        }
+        function fetchEvents() {
+            fetch('http://localhost:5000/events')
+                .then(res => res.json())
+                .then(data => {
+                    const eventsDiv = document.getElementById('events');
+                    eventsDiv.innerHTML = data.map(ev => `<div class="event">${formatEvent(ev)}</div>`).join('');
+                });
+        }
+        fetchEvents();
+        setInterval(fetchEvents, 15000);
+    </script>
+</body>
+
+</html>
