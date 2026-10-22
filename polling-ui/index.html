@@ -1,62 +1,302 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Events Polling UI</title>
+    <title>GitHub Webhook Activity Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f9f9f9;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+            padding: 40px 20px;
         }
 
-        h1 {
-            color: #333;
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
         }
 
-        .event {
-            background: #fff;
-            margin-bottom: 12px;
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 20px;
+            margin-bottom: 24px;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f0f6fc;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-title p {
+            font-size: 0.85rem;
+            color: #8b949e;
+            margin-top: 4px;
+        }
+
+        .polling-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #58a6ff;
+            background: rgba(56, 139, 253, 0.1);
+            border: 1px solid rgba(56, 139, 253, 0.3);
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #238636;
+            box-shadow: 0 0 8px #2ea043;
+        }
+
+        .simulation-bar {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
             padding: 16px;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px #eee;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
-        .timestamp {
-            color: #888;
-            font-size: 0.9em;
+        .sim-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #e6edf3;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .sim-btn {
+            background: #21262d;
+            border: 1px solid #363b42;
+            color: #c9d1d9;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sim-btn:hover {
+            background: #30363d;
+            color: #58a6ff;
+            border-color: #58a6ff;
+        }
+
+        .feed-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .event-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: border-color 0.2s;
+        }
+
+        .event-card:hover {
+            border-color: #58a6ff;
+        }
+
+        .event-main {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .action-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-push {
+            background: rgba(35, 134, 54, 0.2);
+            color: #3fb950;
+            border: 1px solid rgba(63, 185, 80, 0.4);
+        }
+
+        .badge-pr {
+            background: rgba(163, 113, 247, 0.2);
+            color: #a371f7;
+            border: 1px solid rgba(163, 113, 247, 0.4);
+        }
+
+        .badge-merge {
+            background: rgba(137, 87, 229, 0.2);
+            color: #bc8cff;
+            border: 1px solid rgba(188, 140, 255, 0.4);
+        }
+
+        .event-text {
+            font-size: 0.9rem;
+            color: #e6edf3;
+        }
+
+        .event-text b {
+            color: #58a6ff;
+            font-weight: 600;
+        }
+
+        .branch-badge {
+            background: #21262d;
+            border: 1px solid #30363d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #f0f6fc;
+        }
+
+        .event-meta {
+            font-size: 0.75rem;
+            color: #8b949e;
+            white-space: nowrap;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            background: #161b22;
+            border: 1px dashed #30363d;
+            border-radius: 12px;
+            color: #8b949e;
         }
     </style>
 </head>
-
 <body>
-    <h1>Latest GitHub Repo Events</h1>
-    <div id="events"></div>
+    <div class="container">
+        <header>
+            <div class="header-title">
+                <h1>🐙 GitHub Webhook Stream</h1>
+                <p>Real-time repository event ingestion & event polling monitor</p>
+            </div>
+            <div class="polling-indicator">
+                <span class="pulse-dot"></span>
+                <span>Polling every 15s</span>
+            </div>
+        </header>
+
+        <div class="simulation-bar">
+            <span class="sim-label">⚡ Test Simulation:</span>
+            <div class="btn-group">
+                <button class="sim-btn" onclick="simulate('push')">+ Push Event</button>
+                <button class="sim-btn" onclick="simulate('pull_request')">+ Pull Request</button>
+                <button class="sim-btn" onclick="simulate('merge')">+ Merge Event</button>
+            </div>
+        </div>
+
+        <div class="feed-container" id="events">
+            <div class="empty-state">Connecting to webhook receiver...</div>
+        </div>
+    </div>
+
     <script>
+        const API_URL = 'http://localhost:5000';
+
         function formatEvent(event) {
-            if (event.action === 'PUSH') {
-                return `<b>${event.author}</b> pushed to <b>${event.to_branch}</b> <span class="timestamp">on ${event.timestamp}</span>`;
-            } else if (event.action === 'PULL_REQUEST') {
-                return `<b>${event.author}</b> submitted a pull request from <b>${event.from_branch}</b> to <b>${event.to_branch}</b> <span class="timestamp">on ${event.timestamp}</span>`;
+            let badgeClass = 'badge-push';
+            let actionLabel = event.action || 'PUSH';
+
+            if (event.action === 'PULL_REQUEST') {
+                badgeClass = 'badge-pr';
+                actionLabel = 'PR';
             } else if (event.action === 'MERGE') {
-                return `<b>${event.author}</b> merged branch <b>${event.from_branch}</b> to <b>${event.to_branch}</b> <span class="timestamp">on ${event.timestamp}</span>`;
+                badgeClass = 'badge-merge';
+                actionLabel = 'MERGED';
+            }
+
+            let message = '';
+            if (event.action === 'PUSH') {
+                message = `<b>${event.author}</b> pushed commits to <span class="branch-badge">${event.to_branch}</span>`;
+            } else if (event.action === 'PULL_REQUEST') {
+                message = `<b>${event.author}</b> opened pull request from <span class="branch-badge">${event.from_branch}</span> to <span class="branch-badge">${event.to_branch}</span>`;
+            } else if (event.action === 'MERGE') {
+                message = `<b>${event.author}</b> merged branch <span class="branch-badge">${event.from_branch}</span> into <span class="branch-badge">${event.to_branch}</span>`;
             } else {
-                return JSON.stringify(event);
+                message = `<b>${event.author}</b> performed ${event.action}`;
+            }
+
+            return `
+                <div class="event-card">
+                    <div class="event-main">
+                        <span class="action-badge ${badgeClass}">${actionLabel}</span>
+                        <div class="event-text">${message}</div>
+                    </div>
+                    <div class="event-meta">${event.timestamp}</div>
+                </div>
+            `;
+        }
+
+        async function fetchEvents() {
+            try {
+                const res = await fetch(`${API_URL}/events`);
+                const data = await res.json();
+                const eventsDiv = document.getElementById('events');
+                if (!data || data.length === 0) {
+                    eventsDiv.innerHTML = '<div class="empty-state">No events received yet. Click a simulation button above or send a GitHub webhook!</div>';
+                    return;
+                }
+                eventsDiv.innerHTML = data.map(ev => formatEvent(ev)).join('');
+            } catch (err) {
+                console.warn('API offline or loading...', err);
             }
         }
-        function fetchEvents() {
-            fetch('http://localhost:5000/events')
-                .then(res => res.json())
-                .then(data => {
-                    const eventsDiv = document.getElementById('events');
-                    eventsDiv.innerHTML = data.map(ev => `<div class="event">${formatEvent(ev)}</div>`).join('');
+
+        async function simulate(type) {
+            try {
+                await fetch(`${API_URL}/simulate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: type, author: 'deekshi07' })
                 });
+                fetchEvents();
+            } catch (err) {
+                alert('Backend service is not running on http://localhost:5000. Start it via: python webhook-repo/app.py');
+            }
         }
+
         fetchEvents();
         setInterval(fetchEvents, 15000);
     </script>
 </body>
-
 </html>
